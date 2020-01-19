@@ -21,15 +21,21 @@
 
 \func \infixr 2 || (x y : Bool) : Bool => if x x y
 
+\func test-|| : if true 1 2 = 1 => idp
+
 -- 3. Определите возведение в степень и факториал для натуральных чисел.
 
 \func \infixr 8 ^ (x y : Nat) : Nat \elim y
   | zero => 1
   | suc y' => x * x ^ y'
 
-\func fac (x : Nat) : Nat \elim x
+\func test-^ : 2 ^ 3 = 8 => idp
+
+\func fac (x : Nat) : Nat
   | zero => 1
   | suc x' => (x' + 1) * fac x'
+
+\func test-fac : fac 4 = 24 => idp
 
 -- 4. Определите mod и gcd.
 
@@ -39,6 +45,8 @@
       | 0 => 0
       | suc s => if (x < y) x (mod' s (x - y) y)
 
+\func test-mod : mod 12 9 = 3 => idp
+
 \func gcd (x y : Nat) => gcd' (x * 2) x y
   \where
     \func gcd' (s x y : Nat) : Nat \elim s
@@ -46,9 +54,11 @@
       | suc s => if (y < x)
                     (gcd' s y x)
                     (\case x \with {
-                      | zero => 1
+                      | zero => y
                       | suc x' => gcd' s (y `mod` x) x
                     })
+
+\func test-gcd : gcd 9 12 = 3 => idp
 
 -- 5. Определите (полиморфный) reverse для списков.
 
@@ -57,6 +67,10 @@
     \func reverse' {A : \Type} (ys xs : List A) : List A \elim xs
       | nil => ys
       | cons x xs => reverse' (cons x ys) xs
+
+\func xs => (cons 1 (cons 2 (cons 3 nil)))
+\func rs => (cons 3 (cons 2 (cons 1 nil)))
+\func test-reverse : reverse xs = rs => idp
 
 -- 6. Реализуйте любой (but choose wisely) алгоритм сортировки. Функцию сравнения можно принимать в качестве аргумента.
 
@@ -70,3 +84,6 @@
   | nil => nil
   | cons x xs => filter ((flip cmp) x) xs ++ cons x (filter (cmp x) xs)
 
+\func ys => (cons 3 (cons 1 (cons 2 (cons 4 (cons 6 (cons 5 nil))))))
+\func ss => (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 nil))))))
+\func test-sort : sort (\lam (x y : Nat) => x < y) ys = ss => idp
