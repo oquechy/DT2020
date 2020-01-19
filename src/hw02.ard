@@ -1,9 +1,16 @@
-\import lect02 \hiding (+,*)
-\open Nat \hiding (-,div) -- Здесь лежат + и *.
+\import lect02 \hiding (+, *)
+\open Nat \hiding (-, div)
+
+-- Здесь лежат + и *.
 
 -- I. Задания на рекурсивные определения.
 
 -- 1. Определите функцию if, аналогичную следующей функции:
+
+\func if (b : Bool) {A : \Type} (t e : A) : A \elim b
+  | true => t
+  | false => e
+
 {- Haskell:
    if :: Bool -> a -> a -> a
    if True t _ = t
@@ -12,20 +19,54 @@
 
 -- 2. Определите || через if.
 
-\func \infixr 2 || (x y : Bool) : Bool => {?}
+\func \infixr 2 || (x y : Bool) : Bool => if x x y
 
 -- 3. Определите возведение в степень и факториал для натуральных чисел.
 
-\func \infixr 8 ^ (x y : Nat) => {?}
+\func \infixr 8 ^ (x y : Nat) : Nat \elim y
+  | zero => 1
+  | suc y' => x * x ^ y'
 
-\func fac (x : Nat) => {?}
+\func fac (x : Nat) : Nat \elim x
+  | zero => 1
+  | suc x' => (x' + 1) * fac x'
 
 -- 4. Определите mod и gcd.
 
-\func mod (x y : Nat) => {?}
+\func mod (x y : Nat) : Nat => mod' x x y
+  \where
+    \func mod' (s x y : Nat) : Nat \elim s
+      | 0 => 0
+      | suc s => if (x < y) x (mod' s (x - y) y)
 
-\func gcd (x y : Nat) => {?}
+\func gcd (x y : Nat) => gcd' (x * 2) x y
+  \where
+    \func gcd' (s x y : Nat) : Nat \elim s
+      | 0 => 0
+      | suc s => if (y < x)
+                    (gcd' s y x)
+                    (\case x \with {
+                      | zero => 1
+                      | suc x' => gcd' s (y `mod` x) x
+                    })
 
 -- 5. Определите (полиморфный) reverse для списков.
 
+\func reverse {A : \Type} => reverse' {A} nil
+  \where
+    \func reverse' {A : \Type} (ys xs : List A) : List A \elim xs
+      | nil => ys
+      | cons x xs => reverse' (cons x ys) xs
+
 -- 6. Реализуйте любой (but choose wisely) алгоритм сортировки. Функцию сравнения можно принимать в качестве аргумента.
+
+\func flip {A B C : \Type} (f : A -> B -> C) (b : B) (a : A) => f a b
+
+\func filter {A : \Type} (f : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons x xs => \let | xs' => filter f xs \in if (f x) (cons x xs') xs'
+
+\func sort {A : \Type} (cmp : A -> A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons x xs => filter ((flip cmp) x) xs ++ cons x (filter (cmp x) xs)
+

@@ -2,19 +2,33 @@
 --    В IDEA можно просто импортировать данный проект.
 
 -- 2. Определите аналоги следующих функций на языке хаскелл.
+
+\func second (_ y _ : Nat) => y
 {- Haskell:
    second :: Nat -> Nat -> Nat -> Nat
    second _ y _ = y
+-}
 
+\func apply (f : Nat -> Nat) (x : Nat) => f x
+{-
    apply :: (Nat -> Nat) -> Nat -> Nat
    apply f x = f x
+-}
 
+\func compose (f : Nat -> Nat) (g : Nat -> Nat) (x : Nat) => f (g x)
+{-
    compose :: (Nat -> Nat) -> (Nat -> Nat) -> Nat -> Nat
    compose f g x = f (g x)
+-}
 
+\func flip (f : Nat -> Nat -> Nat) (x y : Nat) => f y x
+{-
    flip :: (Nat -> Nat -> Nat) -> Nat -> Nat -> Nat
    flip f x y = f y x
+-}
 
+\func second' => flip (second 0)
+{-
    second' = flip (second 0)
 -}
 
@@ -24,9 +38,9 @@
 
 \func f1 (x y : Nat) => x
 \func f2 : Nat => 0
-\func f3 (f : Nat -> Nat) (z : Nat) : Int => 0
+\func \infix 6 f3 (f : Nat -> Nat) (z : Nat) : Int => 0
 \func f4 : Nat => 0
-\func f5 => f1
+\func \infix 7 f5 => f1
 \func f6 => f4
 
 \func test => f1 f2 f3 f4 f5 f6
