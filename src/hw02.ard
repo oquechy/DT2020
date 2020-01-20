@@ -78,9 +78,14 @@
   | nil => nil
   | cons x xs => \let | xs' => filter f xs \in if (f x) (cons x xs') xs'
 
-\func sort {A : \Type} (cmp : A -> A -> Bool) (xs : List A) : List A \elim xs
-  | nil => nil
-  | cons x xs => filter ((flip cmp) x) xs ++ cons x (filter (cmp x) xs)
+\func sort {A : \Type} (cmp : A -> A -> Bool) (xs : List A) => sort' xs cmp xs
+  \where
+    \func sort' {A : \Type} (l : List A) (cmp : A -> A -> Bool) (xs : List A): List A \elim l
+      | nil => xs
+      | cons _ l => \case xs \with {
+        | nil => nil
+        | cons x xs => sort' l cmp (filter ((flip cmp) x) xs) ++ cons x (sort' l cmp (filter (cmp x) xs))
+      }
 
 \func ys => (cons 3 (cons 1 (cons 2 (cons 4 (cons 6 (cons 5 nil))))))
 \func ss => (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 nil))))))
