@@ -52,8 +52,8 @@
       | suc s => if (y < x)
                     (gcd' s y x)
                     (\case x \with {
-                      | 0 => y
-                      | _ => gcd' s (y `mod` x) x
+                      | zero => y
+                      | suc x' => gcd' s (y `mod` x) x
                     })
 
 \func test-gcd : gcd 9 12 = 3 => idp
