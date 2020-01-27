@@ -1,6 +1,6 @@
 \import Utils
 \import lect03 (==)
-\import lect04
+\import lect04 \using (lookup \as vlookup)
 
 -- 1. Напишите функцию lookup, которая принимает List A и натуральное число и возвращает элемент по заданому индексу.
 --    В общем случае эту функцию определить невозможно, т.к. индекс может быть больше, чем число элементов в списке.
@@ -62,6 +62,9 @@
     \func go (i : Nat) {n : Nat} {A : \Type} (f : Fin (suc n) -> A) : Vec A (suc i) \elim i
       | zero => f fzero `vcons` vnil
       | suc i => f (fromNat (suc n)) `vcons` go i f
+
+-- coin реализован неправильно
+\func coin_test : coin (vlookup (vcons 0 (vcons 1 (vcons 2 vnil)))) = vcons 0 (vcons 1 (vcons 2 vnil)) => idp
 
 -- 6. Определите тип матриц и ряд функций над ними.
 
