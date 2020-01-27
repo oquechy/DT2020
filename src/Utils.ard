@@ -4,6 +4,36 @@
 
 \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
 
+\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
+    => coe (\lam i => B (p @ i)) b right
+
+\func \infixr 5 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
+  => transport (\lam x => a = x) q p
+
+\func sym {A : \Type} {a a' : A} (p : a = a') : a' = a
+  => transport (\lam x => x = a) p idp
+
+\func \fix 2 qed {A : \Type} (a : A) : a = a => idp
+
+\func \infixr 1 >== {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') => p *> q
+
+\func \infix 2 ==< {A : \Type} (a : A) {a' : A} (p : a = a') => p
+
+\func J
+  {A : \Type} {a : A}
+  (B : \Pi (a' : A) -> a = a' -> \Type)
+  (b : B a idp)
+  {a' : A} (p : a = a')
+  : B a' p
+  => coe (\lam i => B (p @ i) (psqueeze p i)) b right
+  \where \func psqueeze  {A : \Type} {a a' : A} (p : a = a') (i : I) : a = p @ i => path (\lam j => p @ I.squeeze i j)
+
+-- Logic
+
+\func \infix 1 <-> (A B : \Type) => \Sigma (A -> B) (B -> A)
+
+\func Not (A : \Type) => A -> Empty
+
 -- Either
 
 \data Either (A B : \Type) | inl A | inr B

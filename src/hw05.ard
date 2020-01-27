@@ -1,0 +1,123 @@
+\import Utils
+\open Nat \hiding (<=)
+
+-- 1. Определите конгруэнтность для функций двух аргументов через transport.
+--    Можно использовать любые функции, определенные через transport.
+
+\func pmap2 {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => {?}
+
+-- 2. Докажите, что transport выражается через pmap и repl и наоборот.
+
+-- repl говорит, что если у нас есть два равных типа, то у нас есть функция из одного во второй.
+-- Определите repl через transport.
+
+\func repl {A B : \Type} (p : A = B) (a : A) : B => {?}
+
+-- Определите transport через repl и pmap.
+
+\func transport' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+
+-- 3. Докажите, что reverse (reverse xs) = xs, где reverse определен через ++.
+
+\data List (A : \Type) | nil | cons A (List A)
+
+\func \infixl 4 ++ {A : \Type} (xs ys : List A) : List A \elim xs
+  | nil => ys
+  | cons x xs => cons x (xs ++ ys)
+
+\func reverse {A : \Type} (xs : List A) : List A
+  | nil => nil
+  | cons x xs => reverse xs ++ cons x nil
+
+-- Это утверждение будет полезно для доказательства.
+\func reverse++ {A : \Type} (xs ys : List A) : reverse (xs ++ ys) = reverse ys ++ reverse xs => {?}
+
+\func reverse-isInvolutive {A : \Type} (xs : List A) : reverse (reverse xs) = xs => {?}
+
+-- 4. Докажите дистрибутивность умножения над сложением для натуральных чисел.
+
+\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k => {?}
+
+\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n => {?}
+
+-- 5. Докажите, что (\lam x => not (not x)) = (\lam x => x).
+
+\func not (b : Bool) : Bool
+  | true => false
+  | false => true
+
+\func notNotId : (\lam x => not (not x)) = (\lam x => x) => {?}
+
+-- 6. Определите факториал через Nat-rec.
+
+-- 7. Докажите ассоциативность сложения для натуральных чисел через Nat-elim.
+
+-- 8. Определите рекурсор и элиминатор для D.
+
+\data D
+  | con1 Nat
+  | con2 D D
+  | con3 (Nat -> D)
+
+-- 9. Определите рекурсор и элиминатор для List.
+
+-- 10. Докажите, что 0 не равно suc x.
+
+\func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => {?}
+
+-- 11. Докажите, что fac не равен suc.
+
+\open Nat(*)
+
+\func fac (n : Nat) : Nat
+  | 0 => 1
+  | suc n => suc n * fac n
+
+\func fac/=suc (p : fac = suc) : Empty => {?}
+
+-- 12. Докажите, что left = right, не используя transport.
+
+\func left=right : left = right => {?}
+
+-- 13. Докажите, что если a = a' и b = b', то (a,b) = (a',b').
+
+\func pairEq {A B : \Type} {a a' : A} {b b' : B} (p : a = a') (q : b = b') : (a,b) = (a',b') => {?}
+
+-- 14. Докажите, что если p = p', то p.1 = p'.1.
+
+\func projEq {A : \Type} (B : A -> \Type) {p p' : \Sigma (x : A) (B x)} (t : p = p') : p.1 = p'.1 => {?}
+
+-- 15. Докажите версию pmap, которая определена для функций двух аргументов.
+
+\func pmap2' {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' => {?}
+
+-- 16. Мы видели как определить transport через coe. Определите частный случай coe через transport.
+--     Можно ли определить transport через coe0?
+
+\func coe0 (A : I -> \Type) (a : A left) : A right => {?}
+
+-- 17. Определите функцию B right -> B left.
+
+\func Itr' {B : I -> \Type} (b : B right) : B left => {?}
+
+-- 18. У оператора J есть другая форма, которую мы будем называть Jalt. Докажите, что J и Jalt эквивалентны, то есть выразите одно через другое и наоборот.
+
+-- Выразите Jalt через J. Можно пользоваться только J, idp и всем, что через них выражается.
+
+\func Jalt {A : \Type} (B : \Pi (a a' : A) -> a = a' -> \Type)
+           (b : \Pi (a : A) -> B a a idp)
+           {a a' : A} (p : a = a') : B a a' p => {?}
+
+-- Выразите J через Jalt. Можно пользоваться только Jalt, idp и всем, что через них выражается.
+-- Hint:
+-- 1. Выразите transport через Jalt.
+-- 2. Докажите, что тип \Sigma (x : A) (a = x) одноэлементный, то есть, что для любого p : \Sigma (x : A) (a = x) верно, что (x,idp) = p.
+-- 3. Используя эти две конструкции, легко определить J.
+
+\func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' => {?}
+
+\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p => {?}
+
+\func J' {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type)
+         (b : B a idp)
+         {a' : A} (p : a = a') : B a' p => {?}
