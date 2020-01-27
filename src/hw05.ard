@@ -161,21 +161,21 @@ P => D-elim (\lam _ => P)
     | _ => Empty
   }
 
--- 12. Докажите, что left = right, не используя transport.
+-- 12. Докажите, что left = right, не используя transport, coe и паттерн матчинг с idp.
 
 \func left=right : left = right => path (\lam a => a)
 
--- 13. Докажите, что если a = a' и b = b', то (a,b) = (a',b').
+-- 13. Докажите, что если a = a' и b = b', то (a,b) = (a',b'), не используя transport, coe и паттерн матчинг с idp.
 
 \func pairEq {A B : \Type} {a a' : A} {b b' : B} (p : a = a') (q : b = b') : (a,b) = (a',b') =>
   path (\lam i => (p @ i, q @ i))
 
--- 14. Докажите, что если p = p', то p.1 = p'.1.
+-- 14. Докажите, что если p = p', то p.1 = p'.1, не используя transport, coe и паттерн матчинг с idp.
 
 \func projEq {A : \Type} (B : A -> \Type) {p p' : \Sigma (x : A) (B x)} (t : p = p') : p.1 = p'.1 =>
   path (\lam i => (t @ i).1)
 
--- 15. Докажите версию pmap, которая определена для функций двух аргументов.
+-- 15. Докажите pmap2, не используя transport, coe и паттерн матчинг с idp.
 
 \func pmap2' {A B C : \Type} (f : A -> B -> C) {a a' : A} (p : a = a') {b b' : B} (q : b = b') : f a b = f a' b' =>
   path (\lam i => f (p @ i) (q @ i))
