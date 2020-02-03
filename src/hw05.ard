@@ -1,5 +1,5 @@
 \import Utils
-\import lect05 (Nat-elim, Nat-rec)
+\import lect05 (+-assoc, +-comm, Nat-elim, Nat-rec, funExt)
 \open Nat \hiding (<=)
 
 -- 1. Определите конгруэнтность для функций двух аргументов через transport.
@@ -56,9 +56,20 @@
 
 -- 4. Докажите дистрибутивность умножения над сложением для натуральных чисел.
 
-\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k => {?}
+\func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k
+  | _, _, 0 => idp
+  | n, m, suc k => pmap (\lam l => l + n) (ldistr n m k) *> +-assoc (n * m) (n * k) n
 
-\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n => {?}
+\func rdistr (n m k : Nat) : (m + k) * n = m * n + k * n
+  | 0, _, _ => idp
+  | suc n, m, k =>
+    (m + k) * n + (m + k) ==< sym (+-assoc ((m + k) * n) m k) >==
+    (m + k) * n + m + k ==< pmap (\lam l => l + m + k) (rdistr n m k) >==
+    m * n + k * n + m + k ==< pmap (\lam l => l + k) (+-assoc (m * n) (k * n) m) >==
+    m * n + (k * n + m) + k ==< pmap (\lam l => m * n + l + k) (+-comm (k * n) m) >==
+    m * n + (m + k * n) + k ==< pmap (\lam l => l + k) (sym (+-assoc (m * n) m (k * n))) >==
+    m * n + m + k * n + k ==< +-assoc (m * n + m) (k * n) k >==
+    m * n + m + (k * n + k) `qed
 
 -- 5. Докажите, что (\lam x => not (not x)) = (\lam x => x).
 
@@ -66,7 +77,11 @@
   | true => false
   | false => true
 
-\func notNotId : (\lam x => not (not x)) = (\lam x => x) => {?}
+\func not-isInvolution (x : Bool) : not (not x) = x
+  | true => idp
+  | false => idp
+
+\func notNotId : (\lam x => not (not x)) = (\lam x => x) => funExt (\lam _ => Bool) not-isInvolution
 
 -- 6. Определите факториал через Nat-rec.
 
@@ -86,32 +101,51 @@
   | con2 D D
   | con3 (Nat -> D)
 
-\func D-rec (P : \Type)
-            (c1 : Nat -> P)
-            (c2 : D -> D -> P -> P -> P)
-            (c3 : (Nat -> D) -> P)
-            (x : D) : P
-  \elim x
-    | con1 n => c1 n
-    | con2 l r => c2 l r (D-rec P c1 c2 c3 l) (D-rec P c1 c2 c3 r)
-    | con3 f => c3 f
-
 \func D-elim (P : D -> \Type)
              (c1 : \Pi (n : Nat) -> P (con1 n))
              (c2 : \Pi (l r : D) -> P l -> P r -> P (con2 l r))
-             (c3 : \Pi (f : Nat -> D) -> P (con3 f))
+             (c3 : \Pi (f : Nat -> D) -> (\Pi (n : Nat) -> P (f n)) -> P (con3 f))
              (x : D) : P x
-  \elim x
-    | con1 n => c1 n
-    | con2 l r => c2 l r (D-elim P c1 c2 c3 l) (D-elim P c1 c2 c3 r)
-    | con3 f => c3 f
+\elim x
+  | con1 n => c1 n
+  | con2 l r => c2 l r (D-elim P c1 c2 c3 l) (D-elim P c1 c2 c3 r)
+  | con3 f => c3 f (\lam n => D-elim P c1 c2 c3 (f n))
+
+\func D-rec (P : \Type) : (Nat -> P) ->
+(D -> D -> P -> P -> P) ->
+((Nat -> D) -> (Nat -> P) -> P) ->
+D ->
+P => D-elim (\lam _ => P)
+
+\func no-D-rec (d : D) : Bool \elim d
+  | con1 n => true
+  | con2 l r => no-D-rec l && no-D-rec r
+  | con3 f => no-D-rec (f 4)
+
+\func test-D-rec (d : D) : Bool => D-rec Bool
+                                         (\lam x => true)
+                                         (\lam _ _ => &&)
+                                         (\lam _ g => g 4)
+                                         d
 
 -- 9. Определите рекурсор и элиминатор для List.
+
+-- \data List (A : \Type) | nil | cons A (List A)
+
+\func List-elim {A : \Type}
+                (P : List A -> \Type)
+                (n : P nil)
+                (c : \Pi (a : A) -> \Pi (l' : List A) -> P l' -> P (cons a l'))
+                (l : List A) : P l \elim l
+  | nil => n
+  | cons a l => c a l (List-elim P n c l)
+
+\func List-rec {A : \Type} (P : \Type) : P -> (A -> List A -> P -> P) -> List A -> P => List-elim (\lam _ => P)
 
 -- 10. Докажите, что 0 не равно suc x.
 
 \func zero/=suc (x : Nat) (p : 0 = suc x) : Empty => transport f p ()
-    \where \func f (n : Nat) : \Type | zero => \Sigma | _ => Empty
+  \where \func f (n : Nat) : \Type | zero => \Sigma | _ => Empty
 
 -- 11. Докажите, что fac не равен suc.
 
@@ -122,10 +156,10 @@
   | suc n => suc n * fac n
 
 \func fac/=suc (p : fac = suc) : Empty => transport f p ()
-    \where \func f (g : Nat -> Nat) : \Type => \case g 1 \with {
-      | 1 => \Sigma
-      | _ => Empty
-    }
+  \where \func f (g : Nat -> Nat) : \Type => \case g 1 \with {
+    | 1 => \Sigma
+    | _ => Empty
+  }
 
 -- 12. Докажите, что left = right, не используя transport.
 
@@ -170,11 +204,12 @@
 -- 2. Докажите, что тип \Sigma (x : A) (a = x) одноэлементный, то есть, что для любого p : \Sigma (x : A) (a = x) верно, что (x,idp) = p.
 -- 3. Используя эти две конструкции, легко определить J.
 
-\func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' =>
-    Jalt (\lam a a' _ => B a') (\lam a => B a) p
+\func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') : B a -> B a' =>
+  Jalt (\lam a a' _ => B a -> B a') (\lam _ x => x) p
 
-\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p => {?}
+\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p
+  | (x, idp) => idp
 
 \func J' {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type)
          (b : B a idp)
-         {a' : A} (p : a = a') : B a' p => {?}
+         {a' : A} (p : a = a') : B a' p => transport'' (\lam s => B s.1 s.2) (sigma-contr (a', p)) b
