@@ -71,6 +71,22 @@
     m * n + m + k * n + k ==< +-assoc (m * n + m) (k * n) k >==
     m * n + m + (k * n + k) `qed
 
+-- rdistr можно реализовать через ldistr и *-comm.
+-- Ниже приведен план доказательства *-comm.
+\func *-comm (n m : Nat) : n * m = m * n
+  | 0, 0 => idp
+  | 0, suc m => *-comm 0 m
+  | suc n, 0 => *-comm n 0
+  | suc n, suc m => pmap suc (
+      suc n * m + n   ==< {?} >==
+      m * suc n + n   ==< idp >==
+      (m * n + m) + n ==< {?} >==
+      m * n + (m + n) ==< {?} >==
+      n * m + (n + m) ==< {?} >==
+      (n * m + n) + m ==< idp >==
+      n * suc m + m   ==< {?} >==
+      suc m * n + m   `qed)
+
 -- 5. Докажите, что (\lam x => not (not x)) = (\lam x => x).
 
 \func not (b : Bool) : Bool

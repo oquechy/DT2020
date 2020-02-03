@@ -1,0 +1,92 @@
+\import Utils
+\import lect05 (+-comm)
+\import lect06 \hiding (<=-refl)
+\open Nat(+,*)
+
+-- 1. Докажите, что vnil является нейтральным элементом для v++.
+
+\func vnil-rightId {A : \Type} {n : Nat} (xs : Vec A n) : transport (Vec A) (+-comm 0 n) (xs v++ vnil) = xs => {?}
+
+-- 2. Определите предикат принадлежности элемента списку.
+
+\data In {A : \Type} (a : A) (xs : List A)
+
+-- 3. Докажите эквивалентность четырех различных определений LessOrEq: lessOrEq, lessOrEq', LessOrEq и LessOrEq'.
+
+-- 4. Определите рефлексивное транзитивное замыкание отношения.
+--    То есть ReflTransClosure R -- это минимальное рефлексивное и транзитивное отношение, содержащее R.
+
+\data ReflTransClosure {A : \Type} (R : A -> A -> \Type) (x y : A)
+
+-- 5. Докажите, что если R уже рекфлексивно и транзитивно, то ReflTransClosure R эквивалентно R.
+
+\func ReflTransClosure-lem {A : \Type} (R : A -> A -> \Type) (refl : \Pi (x : A) -> R x x) (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+  : \Pi (x y : A) -> R x y <-> ReflTransClosure R x y
+  => {?}
+
+-- 6. Определите предикат Sublist xs ys на списках, означающий "список xs является подсписком ys".
+
+-- 7. Докажите, что Sublist (filter xs) xs для любого списка xs.
+
+-- 8. Реализуйте любой алгоритм сортировки, используя \case для паттерн матчинга на результате сравнения элементов списка.
+
+-- 9. Определите filter через if, а не через \case.
+--    Докажите для этой версии filter лемму filter-lem.
+
+\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A => {?}
+
+\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A) : length (filter' p xs) Nat.<= length xs => {?}
+
+-- 10. Закончите определение функции \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x из лекции.
+
+-- 11. Парадокс Рассела показывает, что не существует множества всех множеств.
+-- Если такое множеств существует, то мы можем определить множество B, состоящее из множеств, не содержащих себя.
+-- Тогда B принадлежит себе тогда и только тогда, когда оно себе не принадлежит.
+-- Отсюда следует противоречии.
+-- Теорема Кантора утверждает, что не сущесвует множества X с сюръекцией из X в множество подмножеств X.
+-- Ее доказательство также конструирует утверждение, которое верно тогда и только тогда, когда оно ложно.
+-- Верно, что в общем случае существование такого утверждения влечет противоречие.
+-- Это легко доказать при помощи исключенного третьего, но утверждение верно и без него.
+-- Докажите этот факт.
+\func contrProp {A : \Type} (p : A -> Not A) (q : Not A -> A) : Empty
+  => {?}
+
+-- 12. Докажите, что предикат isEven разрешим.
+
+\func isEven (n : Nat) => \Sigma (k : Nat) (n = 2 * k)
+
+\func isEven-dec : DecPred isEven => {?}
+
+-- 13. Докажите, что если равенство элементов A разрешимо, то любой список элементов A либо пуст, либо состоит из повторений одного элемента, либо в A существует два различных элемента.
+
+\func repeat {A : \Type} (n : Nat) (a : A) : List A \elim n
+  | 0 => nil
+  | suc n => cons a (repeat n a)
+
+\data Result (A : \Type) (xs : List A)
+  | empty (xs = nil)
+  | repeated (n : Nat) (a : A) (p : xs = repeat n a)
+  | A-is-not-trivial (a a' : A) (p : a = a' -> Empty)
+
+\func lemma {A : \Type} (xs : List A) {dec : DecEq A} : Result A xs => {?}
+
+-- 14. Определите view, представляющий число в виде частного и остатка от деления его на произвольное (неотрицательное) число m.
+--    Реализуйте функцию деления.
+
+\data ModView (m n : Nat)
+  | quot-rem (q r : Nat) (t : r < m) (p : n = q * m + r)
+
+\func mod-view (m n : Nat) (t : 0 < m) : ModView m n => {?}
+
+\func div (n m : Nat) (t : 0 < m) : Nat => {?}
+
+-- 15. Докажите, что функции FromBoolToDec и FromDecToBool взаимно обратны.
+
+\func bdb {A : \Type} (p : A -> Bool) : FromDecToBool (FromBoolToDec p) = p => {?}
+
+-- Мы не можем доказать, что FromBoolToDec (FromDecToBool P) = P, но мы можем доказать более слабое утверждение: эти предикаты логически эквивалентны.
+-- Для этого введем эквивалентность предикатов.
+
+\func dbd {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P))
+  : \Pi (x : A) -> (FromBoolToDec (FromDecToBool P)).1 x <-> P.1 x
+  => {?}

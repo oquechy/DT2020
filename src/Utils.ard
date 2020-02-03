@@ -4,8 +4,8 @@
 
 \func pmap {A B : \Type} (f : A -> B) {a a' : A} (p : a = a') : f a = f a' => path (\lam i => f (p @ i))
 
-\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a'
-    => coe (\lam i => B (p @ i)) b right
+\func transport {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') (b : B a) : B a' \elim p
+    | idp => b
 
 \func \infixr 5 *> {A : \Type} {a a' a'' : A} (p : a = a') (q : a' = a'') : a = a''
   => transport (\lam x => a = x) q p
@@ -34,9 +34,15 @@
 
 \func Not (A : \Type) => A -> Empty
 
+\func suc/=0 {n : Nat} (p : suc n = 0) : Empty => transport (\lam n => \case n \with { | 0 => Empty | suc _ => \Sigma }) p ()
+
 -- Either
 
 \data Either (A B : \Type) | inl A | inr B
+
+\truncated \data \fixr 2 Or (A B : \Type) : \Prop
+  | byLeft A
+  | byRight B
 
 -- Bool
 
@@ -89,3 +95,7 @@
 -- Maybe
 
 \data Maybe (A : \Type) | nothing | just A
+
+-- Preorder
+
+\func \infix 4 < (x y : Nat) => suc x Nat.<= y

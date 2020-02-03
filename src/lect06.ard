@@ -1,0 +1,295 @@
+\import Utils
+
+-- 1. Ассоциативность ++ для векторов.
+
+\open Nat \hiding (<=)
+
+\func +-assoc (n m k : Nat) : n + (m + k) = (n + m) + k \elim k
+  | 0 => idp
+  | suc k => pmap suc (+-assoc n m k)
+
+-- Ассоциативность для v++ даже сформулировать сложно, так как у (xs v++ ys) v++ zs и xs v++ (ys v++ zs) разные типы: Vec A (k + (m + n)) и Vec A ((k + m) + n).
+-- Это можно поправить при помощи transport, так как он позволяет любой элемент Vec A x превратить в элемент Vec A y, если x и y равны.
+\func v++-assoc {A : \Type} {n m k : Nat}
+                (xs : Vec A n) (ys : Vec A m) (zs : Vec A k)
+  : transport (Vec A) (+-assoc k m n) ((xs v++ ys) v++ zs) = xs v++ (ys v++ zs) \elim n, xs
+  | 0, vnil => idp
+  | suc n, vcons a xs => lem xs ys zs a (+-assoc k m n) *> pmap (vcons a) (v++-assoc xs ys zs)
+  \where
+    \func lem {A : \Type} {n m k : Nat}
+              (xs : Vec A n) (ys : Vec A m) (zs : Vec A k) (a : A)
+              {x : Nat} (p : k + (m + n) = x)
+      : transport (Vec A) (pmap suc p) (vcons a ((xs v++ ys) v++ zs))
+      = vcons a (transport (Vec A) p ((xs v++ ys) v++ zs)) \elim p
+      | idp => idp
+
+\func v++-assoc' {A : \Type} {n m k : Nat}
+                 (xs : Vec A n) (ys : Vec A m) (zs : Vec A k)
+  : transport (Vec A) (+-assoc k m n) ((xs v++ ys) v++ zs) = xs v++ (ys v++ zs) \elim n, xs
+  | 0, vnil => idp
+  | suc n, vcons a xs => lem ((xs v++ ys) v++ zs) a (+-assoc k m n) *> pmap (vcons a) (v++-assoc xs ys zs)
+  \where
+    \func lem {A : \Type} {n : Nat} (xs : Vec A n) (a : A) {x : Nat} (p : n = x)
+      : transport (Vec A) (pmap suc p) (vcons a xs) = vcons a (transport (Vec A) p xs)
+      \elim p
+      | idp => idp
+
+{-
+\func v++-assoc'' {A : \Type} {n m k : Nat}
+                  (xs : Vec A n) (ys : Vec A m) (zs : Vec A k)
+  : (xs v++ ys) v++ zs = transport (Vec A) (+-assoc' k m n) (xs v++ (ys v++ zs)) \elim n, xs
+  | 0, vnil => idp
+  | suc n, vcons x xs =>
+        pmap (vcons x) (v++-assoc' xs ys zs) *> -- Чтобы доказать это утверждение, мы сначала используем индукционную гипотезу.
+                                               -- После этого нам нужно доказать, что
+                                               -- vcons x (transport (Vec A) (+-assoc' k m n) (xs v++ (ys v++ zs))) =
+                                               -- transport (Vec A) (pmap suc (+-assoc' k m n)) (vcons x (xs v++ (ys v++ zs))
+                                               -- Мы обобщаем это утверждение и доказываем его не только для +-assoc' k m n, а для любых e : Nat и p : k + m + n = e.
+                                               -- Первым аргументом J передается это обобщенное утверждение.
+                                               -- После этого остается только доказать его для случае p == idp.
+                                               -- А в этом случае это верно по рефлексивности (это второй аргумент J).
+        J (\lam e (p : k + m + n = e) =>
+                    vcons x (transport (Vec A) p (xs v++ (ys v++ zs))) =
+                    transport (Vec A) (pmap suc p) (vcons x (xs v++ (ys v++ zs))))
+          idp
+          (+-assoc' k m n)
+
+\func +-assoc' (n m k : Nat) : (n + m) + k = n + (m + k) \elim k
+  | 0 => idp
+  | suc k => pmap suc (+-assoc' n m k)
+-}
+
+-- 2. Предикаты.
+
+-- Есть несколько способов определять предикаты над некоторым типом A:
+-- * Выразить из через уже существующие (например равенство) и различные логические связки. Например, предикат isEven можно выразить как \lam n => \Sigma (k : Nat) (n = 2 * k).
+-- * Рекурсивно. Этот способ работает только если A -- тип данных.
+-- * Индуктивно.
+
+-- Определение <= через равенство.
+\func lessOrEq (n m : Nat) => \Sigma (k : Nat) (n + k = m)
+
+-- Рекурсивное определение предиката <=
+\func lessOrEq' (n m : Nat) : \Type
+  | 0, m => \Sigma
+  | suc n, 0 => Empty
+  | suc n, suc m => lessOrEq' n m
+
+-- Первое индуктивное определение <=
+\data LessOrEq (n m : Nat) \with
+  | 0, m => z<=n
+  | suc n, suc m => s<=s (LessOrEq n m)
+
+\func test11 : LessOrEq 0 100 => z<=n
+\func test12 : LessOrEq 3 67 => s<=s (s<=s (s<=s z<=n))
+-- \func test10 : LessOrEq 1 0 => ....
+
+-- Один и тот же предикат можно определить индуктивно различными способами.
+-- Когда мы хотим задать предикат индуктивно, нам нужно просто написать набор правил, которые верны для данного предиката и при этом пораждают его.
+-- Например, в LessOrEq у нас два правила: 0 <= m для любого m и, если n <= m, то suc n <= suc m. Любое неравенство можно получить из этих двух правил.
+
+-- Но это не единственный набор правил, который пораждает <=.
+-- Например, мы можем взять следующий набор: n <= n для всех n и, если n <= m, то n <= suc m.
+-- Этот набор реализован в LessOrEq''.
+
+-- Второе индуктивное определение <=
+\data LessOrEq' (n m : Nat) \elim m
+  | m => <=-refl (n = m)
+  | suc m => <=-step (LessOrEq' n m)
+
+\func test11' : LessOrEq' 100 100 => <=-refl idp
+\func test12' : LessOrEq' 64 67 => <=-step (<=-step (<=-step (<=-refl idp)))
+-- \func test10' : LessOrEq' 1 0 => ....
+
+-- 3. filter через \case и через helper.
+
+-- \case можно использовать для паттерн матчинга на произвольных выражениях так же как и в хаселле.
+\func filter {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons a xs => \case p a \with {
+    | true => cons a (filter p xs)
+    | false => filter p xs
+  }
+
+-- Любую функцию, определенную через \case, можно переписать при помощи вспомогательной функции.
+\func filter' {A : \Type} (p : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons a xs => helper a (filter' p xs) (p a)
+  \where
+    \func helper {A : \Type} (a : A) (r : List A) (b : Bool) : List A \elim b
+      | true => cons a r
+      | false => r
+
+-- 4. \case в языках с зависимыми типами является более сложной конструкцией в общем случаее, чем в языках без них.
+
+-- foo лучше доказать, просто обобщив утверждение, но мы докажем ее через \case, чтобы продемонстировать возможности этой конструкции.
+\func foo {A : \Type} (p : A -> Bool) (a : A) : p a = not (not (p a)) =>
+  -- Перед \with мы можем написать \return <expr>, где <expr> -- это тип, который возвращается из \case.
+  -- После выражения, на котором мы паттерн матчимся, можно написать \as b, где b -- это переменная, которая будет связана в этой конструкции.
+  -- Эту переменную можно использовать в выражении, которое идет после \return.
+  -- Идея в том, что возвращаемый тип может зависеть от выражения, на котором мы паттерн матчимся.
+  -- Эту конструкцию можно использовать, чтобы эту зависимость явно указать.
+  \case p a \as b \return b = not (not b) \with {
+    | true => idp -- В каждом отдельном случае нам нужно будет вернуть указанный после \return тип, в котором b заменено на соответствующий паттерн. Например, здесь нужно вернуть значение типа true = not (not true).
+    | false => idp -- А здесь мы возвращаем значение типа false = not (not false).
+  }
+
+-- foo можно переписать через helper.
+\func foo' {A : \Type} (p : A -> Bool) (a : A) : p a = not (not (p a)) => helper (p a)
+  \where
+    \func helper (b : Bool) : b = not (not b)
+      | true => idp
+      | false => idp
+
+-- 5. \case по нескольким аргументам.
+
+\data Ordering | LT | EQ | GT
+
+\func \infix 4 <b (x y : Nat) : Bool
+  | _, 0 => false
+  | 0, suc _ => true
+  | suc n, suc m => n <b m
+
+-- В \case можно паттерн матчиться сразу по нескольким значениям.
+\func compare (x y : Nat) : Ordering => \case x <b y, y <b x \with {
+  | true, true => EQ
+  | true, false => LT
+  | false, true => GT
+  | false, false => EQ
+}
+
+-- 6. Пример доказательств через \case.
+
+-- Вспомогательное утверждение.
+\func <=-helper {x y : Nat} (p : x Nat.<= y) : x Nat.<= suc y \elim x, y, p
+  | 0, _, _ => zero<=_
+  | suc x, suc y, suc<=suc p => suc<=suc (<=-helper p)
+
+-- Докажем, что длина отфильтрованного списка не превышает длины исходного.
+\func filter-lem {A : \Type} (p : A -> Bool) (xs : List A)
+  : length (filter p xs) Nat.<= length xs \elim xs
+  | nil => zero<=_
+  | cons a xs => \case p a \as b \return
+                      length (\case b \with {
+                                | true => cons a (filter p xs)
+                                | false => filter p xs
+                              }) Nat.<= suc (length xs) \with {
+    | true => suc<=suc (filter-lem p xs)
+    | false => <=-helper (filter-lem p xs)
+  }
+
+-- 7. \case на idp.
+
+-- Когда мы паттерн матчимся на некотором значении e, связь этого выражения с резльтатом паттерн матчинга теряется.
+-- Например, в выражении \case e \with { | pat => expr } в expr мы даже не сможем доказать, что e равно pat.
+-- Иногда бывает необходимо запоминать эту связь.
+-- Для этого можно использовать следующий трюк.
+-- Мы в \case кроме самого выражения еще паттерн матчимся на idp, но указываем ему тип, который зависит от первого значения.
+-- Тогда в каждом случае q будем доказательством равенства между исходным значением и паттерном.
+\func baz {A : \Type} (B : Bool -> \Type) (p : A -> Bool) (a : A)
+          (pt : B true) (pf : B false) : B (p a) =>
+  -- Мы можем явно указывать не только тип возвращаемого значения, но и типы выражений, на которых мы паттерн матчимся.
+  -- И в них также можно использовать переменные, связанные в \as.
+  \case p a \as b, idp : b = p a \with {
+    | true, q => transport B q pt -- Здесь q : true = p a
+    | false, q => transport B q pf -- Здесь q : false = p a
+  }
+
+-- Перепишем baz через вспомогательную функцию.
+\func baz' {A : \Type} (B : Bool -> \Type) (p : A -> Bool) (a : A) (pt : B true) (pf : B false) : B (p a) =>
+  helper B p a pt pf (p a) idp
+  \where
+    \func helper {A : \Type} (B : Bool -> \Type) (p : A -> Bool) (a : A)
+                 (pt : B true) (pf : B false) (b : Bool) (q : b = p a) : B (p a) \elim b
+      | true => transport B q pt -- Здесь q : true = p a
+      | false => transport B q pf -- Здесь q : false = p a
+
+-- 8. Еще один пример.
+
+\func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x =>
+  \case \elim x, f true \as p, idp : f true = p, f false \with {
+    | true, true, ft, _ => pmap (\lam x => f (f x)) ft *> pmap f ft
+    | true, false, ft, q => {?}
+    | false, p, ft, q => {?}
+  }
+
+-- 9. Views.
+
+-- views -- это техника, которая позволяет определять подобие кастомного паттерн матчинга на типах данных.
+-- Например, у Nat по умолчанию два паттерна: zero и suc.
+-- Но мы можем определить подобие своего принципа паттерн матчинга, где у Nat будет два констуктора: even и odd.
+
+-- Для этого мы определяем тип, параметризованный нашим типом данных (в данном примере Nat).
+-- У него будет столько конструкторов с соответствующими параметрами сколько должно быть в соответсвующем принципе паттерн матчинга.
+-- У каждого конструктора должен быть еще параметр вида n = expr, где expr -- это паттерн, с которым матчится значение.
+\data Parity (n : Nat)
+  | even (k : Nat) (p : n = 2 * k)
+  | odd (k : Nat) (p : n = 2 * k + 1)
+
+-- Потом мы определяем функцию, которая для каждого n возвращает элемент этого типа данных, параметризованного n.
+\func parity (n : Nat) : Parity n
+  | 0 => even 0 idp
+  | suc n => \case parity n \with {
+    | even k p => odd k (pmap suc p)
+    | odd k p => even (suc k) (pmap suc p)
+  }
+
+-- Теперь, чтобы использовать новый принцип паттерн матчинга достаточно сделать \case на этой функции.
+-- Например, мы легко можем определить функцию деления на 2.
+\func div2 (n : Nat) : Nat => \case parity n \with {
+  | even k _ => k
+  | odd k _ => k
+}
+
+-- 10. Разрешимые предикаты.
+
+-- Предикат -- это функция вида P : A -> \Type.
+-- Предикат называется разрешимым, если существует алгоритм, разрешающий его, то есть по a : A возвращающий true, если P a верно, и false, если ложно.
+
+-- Так как у нас логика интуиционистская, то не все предикаты разрешимы.
+-- На самом деле, исключенное третье эквивалентно утверждению о том, что все предикаты разрешимы.
+
+-- Пример неразрешимого предиката, который мы запишем неформально, так как его формальное описание будет довольно длинным.
+-- P : Nat -> \Type
+-- P n = "останавливается ли машина Тьюринга с номером n на входе n"
+--
+-- Мы не можем ни доказать, что P разрешим, ни опровергнуть это, так как мы не предполагаем ни исключенное третье, ни его отрицание.
+--
+-- Более простой пример неразрешимого предиката -- это предикат равенства двух функций типа Nat -> Nat.
+
+-- Мы можем определить предикат разрешимости на предикатах.
+\data Decide (A : \Type)
+  | yes A
+  | no (Not A)
+
+-- DecPred P верно в тогда и только тогда, когда P разрешим.
+\func DecPred {A : \Type} (P : A -> \Type) => \Pi (a : A) -> Decide (P a)
+
+-- Например, предикат \lam n => n = 0 разрешим.
+\func decide0 : DecPred (\lam (n : Nat) => n = 0) => \lam n => \case \elim n \with {
+  | 0 => yes idp
+  | suc n => no suc/=0
+}
+
+-- DecEq A верно в точности тогда, когда предикат равенства на A разрешим.
+\func DecEq (A : \Type) => \Pi (a a' : A) -> Decide (a = a')
+
+-- Если верно исключенное третье, то все предикаты разрешимы.
+
+-- 11. Предикаты A -> Bool
+
+-- Разрешимые предикаты вида A -> \Type в точности соответствуют функциям вида A -> Bool.
+
+-- Легко построить функции из A -> Bool в тип разрешимых предикатов и наоборот.
+-- Эти функции почти взаимно обратны. Это будет верно, если правильно сформулировать это утверждение.
+\func FromBoolToDec {A : \Type} (p : A -> Bool) : \Sigma (P : A -> \Type) (DecPred P)
+  => (\lam a => T (p a), \lam a => \case p a \as b \return Decide (T b) \with {
+    | true => yes ()
+    | false => no absurd
+  })
+
+\func FromDecToBool {A : \Type} (P : \Sigma (P : A -> \Type) (DecPred P)) : A -> Bool
+  => \lam a => \case P.2 a \with {
+    | yes _ => true
+    | no _ => false
+  }
