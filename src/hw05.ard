@@ -207,8 +207,8 @@ P => D-elim (\lam _ => P)
 \func transport'' {A : \Type} (B : A -> \Type) {a a' : A} (p : a = a') : B a -> B a' =>
   Jalt (\lam a a' _ => B a -> B a') (\lam _ x => x) p
 
-\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p
-  | (x, idp) => idp
+\func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p =>
+  Jalt (\lam a a' p => {?}) (\lam a => a) (idp {\Sigma (a : A) (a = a)} {(a, idp)})
 
 \func J' {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type)
          (b : B a idp)
