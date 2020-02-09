@@ -224,7 +224,7 @@ P => D-elim (\lam _ => P)
   Jalt (\lam a a' _ => B a -> B a') (\lam _ x => x) p
 
 \func sigma-contr {A : \Type} {a : A} (p : \Sigma (x : A) (a = x)) : (a,idp) = {\Sigma (x : A) (a = x)} p =>
-  Jalt (\lam a a' p => {?}) (\lam a => a) (idp {\Sigma (a : A) (a = a)} {(a, idp)})
+  Jalt (\lam a x eq => (a,idp) = {\Sigma (x : A) (a = x)} (x, eq)) (\lam _ => idp) p.2
 
 \func J' {A : \Type} {a : A} (B : \Pi (a' : A) -> a = a' -> \Type)
          (b : B a idp)
