@@ -1,0 +1,94 @@
+\import Utils
+\import lect06 (Decide)
+\import lect07
+
+-- 1. Определите функцию swap несколькими способами.
+
+-- При помощи \cowith и доступа к полям.
+\func swap {A B : \Type} (p : Pair A B) : Pair B A => {?}
+
+-- При помощи \new и паттерн матчинга.
+\func swap' {A B : \Type} (p : Pair A B) : Pair B A => {?}
+
+-- При помощи \new и доступа к полям.
+\func swap'' {A B : \Type} (p : Pair A B) : Pair B A => {?}
+
+-- 2. Докажите, что swap (swap p) = p.
+
+\func swap-involutive {A B : \Type} (p : Pair A B) : swap (swap p) = p => {?}
+
+-- 3. Докажите, что тип PosNat 0 пустой, а тип PosNat 1 нет.
+
+\func zero-isNotPos (p : PosNat 0) : Empty => {?}
+
+\func one-isPos : PosNat 1 => {?}
+
+-- 4. Определите \record, состоящий из пар взаимно простых натуральных чисел.
+--    Определите тип, состоящий из натуральных чисел, взаимно простых с 60.
+
+-- 5. Докажите, что если равенство элементов A разрешимо, то и равенство элементов List A тоже разрешимо.
+
+\instance ListEq {A : \Type} (dec : Eq A) : Eq (List A)
+  | decideEq => {?}
+
+-- 6. Закончите определение класса монад. Этот класс должен содержать все монадные законы и реализовывать все поля из класса функторов.
+
+\class Monad \extends Functor
+  | return {A : \Type} : A -> F A
+  | \infixl 1 >>= {A B : \Type} : F A -> (A -> F B) -> F B
+
+-- 7. Определите \instance Monad для Maybe.
+
+\instance MaybeMonad : Monad Maybe => {?}
+
+-- 8. Определите \instance Monad для State и State'.
+
+\record State (S A : \Type)
+  | state : S -> \Sigma S A
+
+\data State' (S A : \Type)
+  | state' (S -> \Sigma S A)
+
+-- 9. Определите \instance Monad для Term.
+
+\instance TermMonad : Monad Term
+  | fmap => {?}
+  | fmap-id => {?}
+  | fmap-comp => {?}
+  | return => {?}
+  | >>= => {?}
+
+-- 10. Определите отношение многошаговой редукции на Term.
+
+\func Red {V : \Type} (t s : Term V) : \Type => {?}
+
+-- 11. Стратегия редукции -- это функция, которая каждому терму сопоставляет либо некоторый терм, к которому он редуцируется за 1 шаг, либо доказательство, что таких термов нет.
+--     Определите любую стратегию редукции.
+
+\func strategy {V : \Type} (t : Term V) : Decide (\Sigma (s : Term V) (Red1 t s)) => {?}
+
+-- 12. Докажите следующую обобщенную лемму о подстановке и выведите из нее обычную версию: если Г, x : A |- b : B и Г |- a : A, то Г |- b[a/x] : B.
+
+\func substLem {U V : \Type} (ctx : U -> Type) (b : Term U) (B : Type) (h : hasType ctx b B)
+               (ctx' : V -> Type) (a : U -> Term V) (h' : \Pi (u : U) -> hasType ctx' (a u) (ctx u))
+  : hasType ctx' (b >>= a) B
+  => {?}
+
+\func substLem1 => {?}
+
+-- 13. Докажите, что если Г |- a : A и Red a a', то Г |- a' : A
+
+\func redLem {V : \Type} {ctx : V -> Type} {a a' : Term V} (r : Red a a') {A : Type} (h : hasType ctx a A)
+  : hasType ctx a' A
+  => {?}
+
+-- 14. Закончите доказательство утверждения, что все типизируемые термы достижимы.
+
+-- Это более общее утверждение необходимо для усиления индукционной гипотезы.
+-- Для его доказательства потребуется вспомогательная лемма, которая говорит, что если термы a и b достижимы, и b[a/x] лежит в интерпретации B, то и (\x.b) a лежит в ней.
+\func typeableInterp {V : \Type} (ctx : V -> Type) (env : V -> Term V) (C : \Pi (v : V) -> Interp (ctx v) (env v)) (t : Term V) (T : Type) (p : hasType ctx t T)
+  : Interp T (t >>= env) => {?}
+
+-- Это утверждение легко следует из предыдущего.
+\func typeableInterpId {V : \Type} (ctx : V -> Type) (t : Term V) (T : Type) (p : hasType ctx t T)
+  : Interp T t => {?}

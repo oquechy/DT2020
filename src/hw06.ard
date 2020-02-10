@@ -106,7 +106,7 @@
 \func Sublist-test : Sublist (cons 0 (cons 3 nil)) (cons 0 (cons 1 (cons 2 (cons 3 nil)))) =>
   sl-inc idp (sl-skip (sl-skip (sl-eq (pmap (cons 3) idp))))
 
--- 7. Докажите, что Sublist (filter xs) xs для любого списка xs.
+-- 7. Докажите, что Sublist (filter p xs) xs для любых p и xs.
 
 \func Sublist-filter {A : \Type} (xs : List A) {p : A -> Bool} : Sublist (filter p xs) xs \elim xs
   | nil => sl-eq idp

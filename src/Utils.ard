@@ -96,6 +96,10 @@
 
 \data Maybe (A : \Type) | nothing | just A
 
+\func maybe {A B : \Type} (b : B) (f : A -> B) (m : Maybe A) : B \elim m
+  | nothing => b
+  | just a => f a
+
 -- Preorder
 
 \func \infix 4 < (x y : Nat) => suc x Nat.<= y
