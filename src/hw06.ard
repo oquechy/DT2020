@@ -1,3 +1,4 @@
+\import Prelude
 \import Utils
 \import hw05 (pmap2)
 \import lect02 ()
@@ -228,40 +229,51 @@
   | lt (n < m)
   | ge (m Nat.<= n)
 
-\func compare (n m : Nat) : Cmp n m => {?}
---  | 0, 0 => ge -- (0, idp)
---  | 0, suc n => lt (Nat.suc<=suc Nat.zero<=_)
---  | suc n, 0 => ge (suc n, pmap suc (+-comm 0 n))
---  | suc n, suc m => \case compare n m \with {
---    | lt l => lt (Nat.<=.suc<=suc l)
---    | ge (d, eq) => ge (d, {?})
---  }
+\func compare (n m : Nat) : Cmp n m
+  | _, 0 => ge Nat.zero<=_
+  | 0, suc m => lt (Nat.suc<=suc Nat.zero<=_)
+  | suc n, suc m => \case compare n m \with {
+    | lt l => lt (Nat.suc<=suc l)
+    | ge g => ge (Nat.suc<=suc g)
+  }
 
 \func le=>eq {n m : Nat} (l : n Nat.<= m) (r : m Nat.<= n) : n = m \elim n, m
   | 0, 0 => idp
-  | 0, suc n => {?}
-  | suc n, 0 => {?}
-  | suc n, suc n1 => {?}
+  | 0, suc m => \case r \with {}
+  | suc n, 0 => \case l \with {}
+  | suc n, suc m => \case l, r \with {
+    | Nat.suc<=suc nl, Nat.suc<=suc ml => pmap suc (le=>eq nl ml)
+  }
+
+\func *-comm (n m : Nat) : n * m = m * n
+  | 0, 0 => idp
+  | 0, suc m => *-comm 0 m
+  | suc n, 0 => *-comm n 0
+  | suc n, suc m => pmap suc (
+    suc n * m + n   ==< pmap (\lam nm => nm + n) (*-comm (suc n) m) >==
+    m * n + m + n   ==< sym (+-assoc (m * n) m n) >==
+    m * n + (m + n) ==< pmap2 (\lam n*m n+m => n*m + n+m) (sym (*-comm n m)) (+-comm m n) >==
+    n * m + (n + m) ==< +-assoc (n * m) n m >==
+    n * m + n + m   ==< pmap (\lam nm => nm + m) (*-comm n (suc m)) >==
+    suc m * n + m `qed)
 
 \func mod-view (m n : Nat) (t : 0 < m) : ModView m n \elim n
-  | 0 => quot-rem 0 0 t {?}
+  | 0 => quot-rem 0 0 t (*-comm m 0)
   | suc n => \case compare (suc n) m \with {
-    | lt l => quot-rem 0 (suc n) l {?}
+    | lt l => quot-rem 0 (suc n) l (pmap suc (+-comm n 0) *> pmap (\lam m => suc (m + n)) (*-comm m 0))
     | ge g => \case mod-view m n t \with {
       | quot-rem q r t' p => \case compare (suc r) m \with  {
         | lt l => quot-rem q (suc r) l (pmap suc p)
-        | ge g' => quot-rem (suc q) 0 t {?}
+        | ge g' => quot-rem (suc q) 0 t (
+          suc n         ==< pmap suc p >==
+          q * m + suc r ==< pmap (\lam sr => q * m  + sr) (le=>eq t' g') >==
+          q * m + m     ==< pmap (\lam nm => nm + m) (*-comm q m) >==
+          m * suc q     ==< *-comm m (suc q) >==
+          suc q * m     `qed
+        )
       }
     }
   }
-
---    | 0 => quot-rem 0 0 t {?}
---    | suc n => \case compare n m \with {
---    | lt l => quot-rem 0 n l {?}
---    | ge (d, e) => \case mod-view' m d t \with {
---      | quot-rem q r t p => quot-rem (suc q) r t {?}
---    }
---  }
 
 \func div (n m : Nat) (t : 0 < m) : Nat => \case mod-view m n t \with {
   | quot-rem q _ _ _ => q
