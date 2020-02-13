@@ -207,13 +207,10 @@
 -- 8. Еще один пример.
 
 \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x =>
-  \case \elim x, f true \as p, idp : f true = p, f false \as q, idp : f false = q \with {
-    | true, true, ft, _, _ => pmap (\lam x => f (f x)) ft *> pmap f ft
-    | false, _, _, false, ff => pmap (\lam x => f (f x)) ff *> pmap f ff
-    | true, false, ft, false, ff => pmap (\lam x => f (f x)) ft *> pmap f ff *> ff *> sym ft
-    | false, true, ft, true, ff => pmap (\lam x => f (f x)) ff *> pmap f ft *> ft *> sym ff
-    | true, false, ft, true, ff => pmap f (pmap f ft *> ff)
-    | false, false, ft, true, ff => pmap f (pmap f ff *> ft)
+  \case \elim x, f true \as p, idp : f true = p, f false \with {
+    | true, true, ft, _ => pmap (\lam x => f (f x)) ft *> pmap f ft
+    | true, false, ft, q => {?}
+    | false, p, ft, q => {?}
   }
 
 -- 9. Views.

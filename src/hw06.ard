@@ -166,6 +166,16 @@
 
 -- 10. Закончите определение функции \func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x из лекции.
 
+\func BoolFuncLem (f : Bool -> Bool) (x : Bool) : f (f (f x)) = f x =>
+  \case \elim x, f true \as p, idp : f true = p, f false \as q, idp : f false = q \with {
+    | true, true, ft, _, _ => pmap (\lam x => f (f x)) ft *> pmap f ft
+    | false, _, _, false, ff => pmap (\lam x => f (f x)) ff *> pmap f ff
+    | true, false, ft, false, ff => pmap (\lam x => f (f x)) ft *> pmap f ff *> ff *> sym ft
+    | false, true, ft, true, ff => pmap (\lam x => f (f x)) ff *> pmap f ft *> ft *> sym ff
+    | true, false, ft, true, ff => pmap f (pmap f ft *> ff)
+    | false, false, ft, true, ff => pmap f (pmap f ff *> ft)
+  }
+
 -- 11. Парадокс Рассела показывает, что не существует множества всех множеств.
 -- Если такое множеств существует, то мы можем определить множество B, состоящее из множеств, не содержащих себя.
 -- Тогда B принадлежит себе тогда и только тогда, когда оно себе не принадлежит.
