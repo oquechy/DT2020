@@ -413,12 +413,14 @@
 
 -- 13. Лямбда исчисление.
 
+-- Term V -- тип термов, свободные переменные которых лежат в V.
 \data Term (V : \Type)
   | var V
   | unit
   | app (Term V) (Term V)
   | lam (Term (Maybe V))
 
+-- Отношение одношаговой редукции
 \data Red1 {V : \Type} (t s : Term V) \elim t, s
   | app t1 t2, app s1 s2 => {
     | appLeft (Red1 t1 s1) (t2 = s2)
@@ -427,9 +429,15 @@
   | lam t, lam s => lamRed (Red1 t s)
   | app t a, s => beta (f : Term (Maybe V)) (lam f = t) ((f >>= maybe a var) = s)
 
+-- Если red -- некоторое отношение на A, то элемент a : A называется достижимым, если не существует бесконечных цепочек редукций, начинающихся в a.
+-- Это определение хорошо работает только классически, интуиционистски мы определяем предикат достижимости индуктивно.
+-- В индуктивном построении будет всего одно правило: a -- достижим, если достижимы все a', к котором a редуцируется.
 \data Acc {A : \Type} (red : A -> A -> \Type) (a : A)
   | acc (\Pi (a' : A) -> red a a' -> Acc red a')
 
+-- Так как функция вычисления термов должна быть тотально, то мы определим ее только для достижимых термов.
+-- Она будет дополнительно принимать стратегию редукции, то есть функцию, которая для каждого терма возвращает либо терм, к которому он редуцируется, либо доказательство, что таких термов нет.
+-- Возвращает функция eval терм вместе с доказательством, что он находится в нормальной форме.
 \func eval {V : \Type} (t : Term V) (a : Acc Red1 t)
            (str : \Pi (s : Term V) -> Decide (\Sigma (q : Term V) (Red1 s q)))
   : \Sigma (s : Term V) (\Pi (q : Term V) -> Not (Red1 s q)) \elim a
@@ -438,34 +446,28 @@
     | no c => (t, \lam q r => c (q,r))
   }
 
-\data Type
-  | Arr Type Type
-  | Unit
+-- 14. Нейтральные термы.
 
-\data hasType {V : \Type} (ctx : V -> Type) (t : Term V) (T : Type) \elim t, T
-  | var v, T => varType (ctx v = T)
-  | app f a, B => appType {A : Type} (hasType ctx a A) (hasType ctx f (Arr A B))
-  | lam t, Arr A B => lamType (hasType (maybe A ctx) t B)
-
-\func Interp {V : \Type} (T : Type) (t : Term V) : \Type \elim T
-  | Unit => Acc Red1 t
-  | Arr A B => \Pi (a : Term V) -> Interp A a -> Interp B (app t a)
-
+-- Терм называется нейтральным, если он достижим и в голове не содержит лямбду.
+-- Точнее предикат нейтральности определяется индуктивно:
 \data Neutral {V : \Type} (t : Term V) \elim t
   | unit => unitNeutral
   | var _ => varNeutral
   | app t s => appNeutral (Neutral t) (Acc Red1 s)
 
+-- Нейтральные термы замкнуты относительно редукций.
 \func neutralRed {V : \Type} {t s : Term V} (r : Red1 t s) (n : Neutral t) : Neutral s \elim t, s, r, n
   | app _ s, _, beta f idp q, appNeutral () _
   | app t1 t2, app s1 s2, appLeft r1 idp, appNeutral n a => appNeutral (neutralRed r1 n) a
   | app t1 t2, app s1 s2, appRight idp r2, appNeutral n (acc f) => appNeutral n (f s2 r2)
 
+-- Нейтральные термы действительно достижимы.
 \func neutralAcc {V : \Type} {t : Term V} (n : Neutral t) : Acc Red1 t \elim t, n
   | unit, unitNeutral => acc (\lam s r => \case r \with {})
   | var v, varNeutral => acc (\lam s r => \case r \with {})
   | app t s, appNeutral n a => neutralAppAcc n (neutralAcc n) a
   \where
+    -- Для доказательства утверждения neutralAcc нам понадобится вспомогательное утверждение, которое говорит, что t s достижим, если t и s достижимы и t нейтрален.
     \func neutralAppAcc {V : \Type} {t s : Term V} (n : Neutral t)
                         (a1 : Acc Red1 t) (a2 : Acc Red1 s) : Acc Red1 (app t s)
       \elim a1, a2
@@ -475,12 +477,38 @@
         | app _ s', appRight idp r2 => neutralAppAcc n a1 (f2 s' r2)
       })
 
+-- 15. Нейтральные термы.
+
+-- Теперь определим отношение типизации на термах.
+-- Для этого сначала определим тип типов просто типизированного лямбда исчисления.
+\data Type
+  | Arr Type Type
+  | Unit
+
+-- Отношение типизации определяется индуктивно обычным способом.
+\data hasType {V : \Type} (ctx : V -> Type) (t : Term V) (T : Type) \elim t, T
+  | var v, T => varType (ctx v = T)
+  | app f a, B => appType {A : Type} (hasType ctx a A) (hasType ctx f (Arr A B))
+  | lam t, Arr A B => lamType (hasType (maybe A ctx) t B)
+
+-- 16. Типизируемые термы достижимы.
+
+-- Чтобы доказать, что типизируемые термы достижимы, определим вспомогательный предикат "интерпретация T" для каждого типа T, удовлетворяющий следующим условиям:
+-- * Если t имеет тип T, то t лежит в интерпретации T. Это утверждение останется в качетсве упражнения (typeableInterpId).
+-- * Если t лежит в интерпретации T, то t достижим. Это доказывается индукцией по типу (interpAcc).
+
+\func Interp {V : \Type} (T : Type) (t : Term V) : \Type \elim T
+  | Unit => Acc Red1 t
+  | Arr A B => \Pi (a : Term V) -> Interp A a -> Interp B (app t a)
+
+-- Подтермы достижимого терма достижимы. Нам понадобится это утверждения для левого подтерма в аппликации.
+\func appAccLeft {V : \Type} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 t \elim a
+  | acc f => acc (\lam t' r => appAccLeft (f (app t' s) (appLeft r idp)))
+
+-- Одновременно с interpAcc мы докажем, что любой нейтральный терм лежим в интерпретации T.
 \func neutralInterp {V : \Type} (T : Type) {t : Term V} (n : Neutral t) : Interp T t \elim T
   | Arr A B => \lam s sA => neutralInterp B (appNeutral n (interpAcc A s sA))
   | Unit => neutralAcc n
-
-\func appAccLeft {V : \Type} {t s : Term V} (a : Acc Red1 (app t s)) : Acc Red1 t \elim a
-  | acc f => acc (\lam t' r => appAccLeft (f (app t' s) (appLeft r idp)))
 
 \func interpAcc {V : \Type} (T : Type) (t : Term V) (i : Interp T t) : Acc Red1 t \elim T
   | Unit => i
@@ -489,5 +517,3 @@
 \func typeableAcc {V : \Type} (ctx : V -> Type) (t : Term V) (T : Type)
                   (h : hasType ctx t T) : Acc Red1 t
   => interpAcc T t (typeableInterpId ctx t T h)
-
-
