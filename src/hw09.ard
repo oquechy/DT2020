@@ -1,3 +1,5 @@
+\import hw06 (unsuc)
+\import lect05 (funExt)
 \import lect06
 \import lect09
 \import Utils
@@ -7,18 +9,25 @@
 --    Докажите, что если g `o` f инъективна, то f также инъективна.
 
 -- Композиция функций
+
 \func \fixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
 
-\func o-inj {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj f) (q : isInj g) : isInj (g `o` f) => {?}
+\func o-inj {A B C : \Type}
+            (f : A -> B) (g : B -> C)
+            (p : isInj f) (q : isInj g) : isInj (g `o` f) => \lam x y gfx=gfy => p x y (q (f x) (f y) gfx=gfy)
 
-\func o-inj' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isInj (g `o` f)) : isInj f => {?}
+\func o-inj' {A B C : \Type}
+             (f : A -> B) (g : B -> C)
+             (p : isInj (g `o` f)) : isInj f => \lam x y fx=fy => p x y (pmap g fx=fy)
 
 -- 2. Определите предикат "делится на 3 или на 5" так, чтобы он возвращал утверждения.
 --    Докажите, что MultipleOf3Or5 вкладывается в ℕ.
 
-\func isMultipleOf3Or5 (n : Nat) : \Type => {?}
+\func isMultipleOf3Or5 (n : Nat) : \Type => (mod3 n) Nat.* (mod5 n) = 0
 
-\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => {?}
+\func isMultipleOf3Or5-isProp (n : Nat) : isProp (isMultipleOf3Or5 n) => helper
+  \where \func helper {n : Nat} (x y : isMultipleOf3Or5 n) : x = y
+    | path f, path g => (funExt (\lam  _ => Nat) {f} {g} (\lam i => {?}))
 
 \func MultipleOf3Or5 => \Sigma (n : Nat) (isMultipleOf3Or5 n)
 
@@ -33,18 +42,31 @@
 
 \func \infix 1 <-> (A B : \Type) => \Sigma (A -> B) (B -> A)
 
-\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A) => {?}
+\func isTriv-lem (A : \Type) : isTriv A <-> (\Sigma (isProp A) A) =>
+  (\lam trivA => (\lam x y => sym (trivA.2 x) *> trivA.2 y, trivA.1),
+   \lam propA => (propA.2, \lam a' => propA.1 propA.2 a'))
 
 -- 4. Докажите, что Either не является утверждением в общем случаем.
 
-\func Either-isProp (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) -> isProp (Either A B)) : Empty => {?}
+\func Either-isProp (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) -> isProp (Either A B)) : Empty =>
+  transport (\lam (e : Either (\Sigma) (Maybe Empty)) => \case e \with {
+    | Either.inl a => \Sigma
+    | Either.inr b => Empty
+  }) (Unit=MaybeEmpty p) ()
+  \where \func Unit=MaybeEmpty
+    (p : \Pi {A B : \Type} (pA : isProp A) (pB : isProp B) ->
+        isProp (Either A B)): Either.inl () = Either.inr (nothing : Maybe Empty) =>
+      p (\lam (x y : \Sigma) => idp) (\lam (x y : Maybe Empty) => \case \elim x, \elim y \with {
+        | nothing, nothing => idp
+        | just n, _ => absurd n
+        | _, just n => absurd n
+      }) (Either.inl ()) (Either.inr nothing)
 
 -- 5. Докажите, что \Sigma сохраняет утверждения.
 
 \func Sigma-isProp {A : \Type} (pA : isProp A) (B : A -> \Type)
-                    (pB : \Pi (x : A) -> isProp (B x))
-  : isProp (\Sigma (x : A) (B x))
-  => {?}
+                   (pB : \Pi (x : A) -> isProp (B x))
+  : isProp (\Sigma (x : A) (B x)) => \lam Bx By => sigmaEq B Bx By (pA _ _) (pB _ _ _)
 
 -- 6. Докажите, что LessOrEq и LessOrEq' являются предикатами.
 
@@ -56,13 +78,32 @@
   | suc m => <=-step (LessOrEq' n m)
   | m => <=-refl (n = m)
 
-\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) => {?}
+\func LessOrEq-isProp {n m : Nat} : isProp (LessOrEq n m) => helper
+\where \func helper {n m : Nat} (le le' : LessOrEq n m) : le = le'
+  | {0}, {_}, z<=n, z<=n => idp
+  | {suc _}, {suc _}, s<=s l, s<=s l' => pmap s<=s (helper l l')
 
 -- Для решения LessOrEq'-isProp понадобится тот факт, что Nat является множеством.
 -- Сейчас доказывать это не нужно доказывать, доказательство будет приведено позже.
+
 \func Nat-isSet : isSet Nat => {?}
 
-\func LessOrEq'-isProp {n m : Nat} : isProp (LessOrEq' n m) => {?}
+\func suc/=n {n : Nat} : Not (suc n = n)
+  | {0} => suc/=0
+  | {suc n} => \lam suc=n => suc/=n (pmap unsuc suc=n)
+
+\func not-LessOrEq' {n : Nat} (p : LessOrEq' (suc n) n) : Empty
+  | {_}, <=-refl suc=n => suc/=n suc=n
+  | {suc n}, <=-step l => {?}
+
+\func LessOrEq'-isProp {n m : Nat} : isProp (LessOrEq' n m) => helper
+\where \func helper {n m : Nat} (le le' : LessOrEq' n m) : le = le'
+  | {n}, {m}, <=-refl z=z, <=-refl z=z' => pmap <=-refl (Nat-isSet n m _ _)
+  | {_}, {suc n}, <=-step l, <=-step l' => pmap <=-step (helper _ _)
+  | {0}, {suc n}, _, <=-refl z=suc => absurd (suc/=0 (sym z=suc))
+  | {0}, {suc n}, <=-refl z=suc, _ => absurd (suc/=0 (sym z=suc))
+  | {suc n}, {suc n1}, <=-step l, <=-refl = => {?}
+  | {suc n}, {suc n1}, <=-refl =, <=-step l => {?}
 
 -- 7. Докажте, что ReflClosure LessOrEq не является предикатом, а ReflClosure (\lam x y => T (x < y)) является.
 
@@ -81,12 +122,16 @@
 
 -- 8. Докажите, что если тип A вкладывается в тип B и B является утверждением, то и A является утверждением.
 
-\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A => {?}
+\func sub-isProp {A B : \Type} (f : A -> B) (p : isInj f) (q : isProp B) : isProp A =>
+  \lam x y => p x y (q (f x) (f y))
 
 -- 9. Докажите, что тип с разрешимым равенством являетя множеством.
 
-\func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A
-  => {?}
+\func Dec-isSet {A : \Type} (dec : \Pi (x y : A) -> Decide (x = y)) : isSet A =>
+  \lam x y x=y x=y' => \case dec x y \with {
+    | yes a => {?}
+    | no n => absurd (n x=y)
+  }
 
 -- 10. Если A и B являются множествами, то A `Or` B тоже является множеством.
 
@@ -102,5 +147,4 @@
 
 -- 12. Докажите, что если A является множеством, то List A также им является.
 
-\func List-isSet {A : \Type} (pA : isSet A) : isSet (List A)
-  => {?}
+\func List-isSet {A : \Type} (pA : isSet A) : isSet (List A) => {?}

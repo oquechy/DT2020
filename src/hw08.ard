@@ -1,21 +1,52 @@
+\import Prelude
+\import hw05 (zero/=suc)
+\import hw06 (In, LessOrEq'->lessOrEq, Sublist, in-elem, in-step, sl-eq, sl-inc, sl-skip, unsuc)
+\import hw07 (nil/=cons)
+\import lect05 (+-comm)
+\import lect06 (<=-helper, <=-step, Decide, LessOrEq', lessOrEq, no, yes)
 \import lect08
 \import Utils
-\open Nat(+,*)
+\open Nat (+, *)
 
 -- 1. Укажите явно чему равен уровень в каждом из вызовов id' ниже.
 --    Напишите явно чему равны типы всех функций idTest*.
 
 \func id' {A : \Type} (a : A) => a
 
-\func idTest1 => id' (id' id)
-\func idTest2 => id' Maybe
-\func idTest3 => id' Functor
-\func idTest4 => id' (Functor Maybe)
-\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) => id' (Functor Maybe f)
+\func idTest1 : \Pi (A : \Type \lp) -> A -> A =>
+  id' {\Pi (A : \Type \lp) -> A -> A} (id' {\Pi (A : \Type \lp) -> A -> A} id)
+
+\func idTest2 : \Type \lp -> \Type \lp => id' {\Type \lp -> \Type \lp} Maybe
+
+\func idTest3 : \Type (\suc \lp) => id' {\Type (\suc \lp)} Functor
+
+\func idTest4 : \Type (\suc \lp) => id' {\Type (\suc \lp)} (Functor Maybe)
+
+\func idTest5 (f : \Pi {A B : \Type} -> (A -> B) -> Maybe A -> Maybe B) : \Type \lp =>
+  id' {\Type \lp} (Functor Maybe f)
 
 -- 2. Определите div через Nat-ind.
 
-\func div (n k : Nat) (p : 0 < k) : Nat => {?}
+\func <suc (n : Nat) : n < suc n
+  | 0 => Nat.suc<=suc Nat.zero<=_
+  | suc n => Nat.suc<=suc (<suc n)
+
+\func decide<= (K n : Nat) : Decide (\Sigma (l : Nat) (l < n) (n = K + l))
+  | 0, n => no (\lam k<=n => {?})
+  | suc k, 0 => no (\lam k<=n => suc/=0 (sym (k<=n.3 *> +-comm (suc k) k<=n.1)))
+  | suc k, suc n => \case decide<= k n \with {
+    | yes (l, l<n, n=k+l) => yes (l, <=-helper l<n, pmap suc n=k+l *> pmap suc (+-comm k l) *> +-comm l (suc k))
+    | no f => \case k \as tk, idp : tk = k \with {
+      | 0, eq => yes (n, <suc n, +-comm n 1 *> pmap (\lam k => suc k + n) eq)
+      | suc k', eq => no (\lam k<=n => f (k<=n.1, {?}, pmap unsuc (k<=n.3 *> +-comm (suc (suc k')) k<=n.1) *> +-comm k<=n.1 (suc k')))
+    }
+  }
+
+\func div (n k : Nat) (p : 0 < k) : Nat =>
+  Nat-ind (\lam _ => Nat) (\lam n f => \case decide<= k n \with {
+    | yes (l, l<n, _) => suc (f l l<n)
+    | no _ => 0
+  }) n
 
 -- 3. Докажите следующий принцип индукции для списков.
 
@@ -23,11 +54,47 @@
   {A : \Type}
   (E : List A -> \Type)
   (r : \Pi (xs : List A) -> (\Pi (ys : List A) -> length ys < length xs -> E ys) -> E xs)
-  (xs : List A) : E xs => {?}
+  (xs : List A) : E xs =>
+  Nat-ind (\lam n => \Pi (xs : List A) (len : length xs = n) -> E xs)
+          (\lam m f ys len =>
+              r ys (\lam zs shorter => f (length zs)
+                                         (transport (\lam m => length zs < m) len shorter)
+                                         zs
+                                         idp))
+          (length xs) xs idp
 
 -- 4. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условия:
 --    * filter p xs является подсписком xs
 --    * Все элементы filter p xs удовлетворяют предикату p
 --    * Любой подсписок xs с тем же свойством является подсписком filter p xs
+
+\func filter {A : \Type} (f : A -> Bool) (xs : List A) : List A \elim xs
+  | nil => nil
+  | cons x xs => \let xs' => filter f xs \in \case f x \with {
+    | true => cons x xs'
+    | false => xs'
+  }
+
+\func filter-sublist {A : \Type} (p : A -> Bool) (xs : List A) : Sublist (filter p xs) xs \elim xs
+  | nil => sl-eq idp
+  | cons x xs => \case p x \as b, idp : p x = b
+  \return Sublist (\let xs' => filter p xs
+                   \in \case b \with {
+      | false => xs'
+      | true => cons x xs'
+    }) (cons x xs) \with {
+    | false, eq => sl-skip (filter-sublist p xs)
+    | true, eq => sl-inc idp (filter-sublist p xs)
+  }
+
+\func filter-predicate {A : \Type} (p : A -> Bool) (xs : List A)
+                       {x : A} (in : In x (filter p xs)) : p x = true \elim xs
+  | cons x xs =>
+    \case filter p xs \as ys, idp : filter p xs = ys, p x \as b, idp : p x = b \with {
+      | nil, f=nil, true, px=t => {?}
+      | nil, f=nil, false, px=f => {?}
+      | cons y ys, f=cons, true, px=t => {?}
+      | cons y ys, f=cons, false, px=f => {?}
+    }
 
 -- 5. Бонусное задание: докажите корректность любого алгоритма сортировки, отличного от сортировки вставками.

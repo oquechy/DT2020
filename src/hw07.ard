@@ -1,6 +1,7 @@
 \import Utils
 \import hw02 (gcd)
 \import hw05 (pmap2)
+\import hw06 (ReflTransClosure)
 \import lect05 (funExt, true/=false)
 \import lect06 (Decide, no, yes)
 \import lect07
@@ -133,12 +134,43 @@
   | return => \lam a => state' (\lam s => (s, a))
   | >>= => \lam sa f => \case sa \with {
     | state' tr => state' (\lam s => \case f (tr s).2 \with {
-      | state' tr' => tr' s
+      | state' tr' => tr' (tr s).1
     })
   }
-  | left-id => \lam {A : \Type} a f => {?}
-  | right-id => {?}
-  | assoc => {?}
+  | left-id => \lam {A : \Type} a f =>
+      \case f a \as sa, idp : f a = sa
+      \return state' (\lam s => \case sa \with {
+      | state' tr' => tr' s
+      }) = sa
+      \with {
+        | state' tr, fa=sa => idp
+      }
+  | right-id => \lam {A : \Type} (sa : State' S A) => \case \elim sa \with {
+    | state' tr => idp
+  }
+  | assoc => \lam {A B C : \Type} (sa : State' S A) (f : A -> State' S B) (g : B -> State' S C) =>
+      \case \elim sa \with {
+        | state' tr => pmap state'
+                            (funExt (\lam (s : S) => \Sigma S C)
+                                    (\lam s =>
+                                        \case f (tr s).2 \as sb, idp : f (tr s).2 = sb
+                                        \return (\case g (\case sb \return \Sigma S B \with {
+                                          | state' tr' => tr' (tr s).1
+                                        }).2 \with {
+                                          | state' tr' => tr' (\case sb \return \Sigma S B \with {
+                                            | state' tr' => tr' (tr s).1
+                                          }).1
+                                        }) = (\case \case sb \return State' S C \with {
+                                                      | state' tr => state' (\lam (s : S) => (\case g (tr s).2 \with {
+                                                        | state' tr' => tr' (tr s).1
+                                                      }))
+                                                    } \with {
+                                          | state' tr' => tr' (tr s).1
+                                        })
+                                        \with {
+                                          | state' tr, fa=sb => idp
+                                        }))
+      }
 
 -- 9. Определите \instance Monad для Term.
 
@@ -160,23 +192,50 @@
 
 -- 10. Определите отношение многошаговой редукции на Term.
 
-\func Red {V : \Type} (t s : Term V) : \Type
-  | unit, unit => \Sigma
-  | unit, _ => Empty
-
-  | var v, var u => v = u
-  | var v, _ => Empty
-
-  | app t t1, var v => {?}
-  | app t t1, unit => {?}
-  | app t t1, app t2 t3 => {?}
-  | app t t1, lam t2 => {?}
-  | lam t, s => {?}
+\func Red {V : \Type} (t s : Term V) : \Type => ReflTransClosure Red1 t s
 
 -- 11. Стратегия редукции -- это функция, которая каждому терму сопоставляет либо некоторый терм, к которому он редуцируется за 1 шаг, либо доказательство, что таких термов нет.
 --     Определите любую стратегию редукции.
 
-\func strategy {V : \Type} (t : Term V) : Decide (\Sigma (s : Term V) (Red1 t s)) => {?}
+\func strategy {V : \Type} (t : Term V) : Decide (\Sigma (s : Term V) (Red1 t s))
+  | var v => no (\lam p => \case p.2 \with {})
+  | unit => no (\lam p => \case p.2 \with {})
+  | app t' s' => \case strategy t', strategy s' \with {
+    | yes a, _ => yes (app a.1 s', appLeft a.2 idp)
+    | _, yes a => yes (app t' a.1, appRight idp a.2)
+    | no nt, no ns => \case \elim t' \with {
+      | lam t'' => yes (t'' >>= maybe s' var, beta t'' idp idp)
+      | var v => no (\lam p => \case p.1 \as s, p.2, idp : p.1 = s \with {
+        | var v, r, p1=s => \case transport (\lam s => Red1 (app (var v) s') s) p1=s {?} \with {
+          | beta f = =1 => {?}
+        }
+        | unit, r, p1=s => \case transport (\lam s => Red1 (app unit s') s) p1=s r \with {
+          | beta f = =1 => {?}
+        }
+        | app t t1, r, p1=s => \case transport (\lam s => Red1 (app t' s') s) p1=s r \with {
+          | appLeft r = => {?}
+          | appRight = r => {?}
+          | beta f = =1 => {?}
+        }
+        | lam t, r, p1=s => \case transport (\lam s => Red1 (app t' s') s) p1=s r \with {
+          | beta f = =1 => {?}
+        }
+      })
+      | unit => {?}
+      | app t t1 => {?}
+    }
+  }
+  | lam t' => \case strategy t' \with {
+    | yes a => yes (lam a.1, lamRed a.2)
+    | no n => no (\lam p => \case p.1 \as s, p.2, idp : p.1 = s \with {
+      | var v, r, p1=s => \case transport (\lam s => Red1 (lam t') s) p1=s r \with {}
+      | unit, r, p1=s => \case transport (\lam s => Red1 (lam t') s) p1=s r \with {}
+      | app t t1, r, p1=s => \case transport (\lam s => Red1 (lam t') s) p1=s r \with {}
+      | lam t, r, p1=s => \case transport (\lam s => Red1 (lam t') s) p1=s r \with {
+        | lamRed lr => n (t, lr)
+      }
+    })
+  }
 
 -- 12. Докажите следующую обобщенную лемму о подстановке и выведите из нее обычную версию: если Г, x : A |- b : B и Г |- a : A, то Г |- b[a/x] : B.
 
@@ -184,7 +243,8 @@
                (ctx' : V -> Type) (a : U -> Term V) (h' : \Pi (u : U) -> hasType ctx' (a u) (ctx u))
   : hasType ctx' (b >>= a) B => {?}
 
-\func substLem1 => {?}
+-- если Г, x : A |- b : B и Г |- a : A, то Г |- b[a/x] : B
+\func substLem1 {U : \Type} (ctx : U -> Type) (b : Term U) (B : Type) (h : hasType ctx b B) => {?}
 
 -- 13. Докажите, что если Г |- a : A и Red a a', то Г |- a' : A
 

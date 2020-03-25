@@ -1,5 +1,5 @@
 \import Prelude
-\import Utils
+\import Utils \hiding (<=-refl)
 \import hw05 (pmap2)
 \import lect02 ()
 \import lect05 (+-comm, funExt)
